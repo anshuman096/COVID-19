@@ -1,7 +1,8 @@
 library(data.table)
 library(ggplot2)
 
-confirmed.cases = data.frame(read.csv('csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv', header = TRUE))
+csv.filepath = 'JHU-COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv'
+confirmed.cases = data.frame(read.csv(csv.filepath, header = TRUE))
 territory.coords = data.frame(confirmed.cases[c("Combined_Key", "Lat", "Long_")])
 confirmed.cases = confirmed.cases[, -c(1:6, 8:11)]
 total.confirmed = aggregate(. ~ Province_State, data = confirmed.cases, sum, na.rm = TRUE)

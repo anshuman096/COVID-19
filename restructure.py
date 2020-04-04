@@ -35,7 +35,7 @@ def format_observation(row):
 
 
 dates_dict = {}
-for filename in os.listdir('csse_covid_19_data/csse_covid_19_daily_reports'):
+for filename in os.listdir('JHU-COVID-19/csse_covid_19_data/csse_covid_19_daily_reports'):
     if filename.endswith('.csv'):
         filepath = 'csse_covid_19_data/csse_covid_19_daily_reports/' + filename
         with open(filepath, encoding = 'utf-8-sig') as f:
