@@ -15,7 +15,10 @@ total.confirmed$Date = as.Date(total.confirmed$Date, format = "X%m.%d.%y")
 
 
 ggplot(total.confirmed, aes(x = Date, y = `New York`)) + 
-  geom_bar(stat = 'identity') + 
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  geom_bar(stat = 'identity')
 
+ggplot(total.confirmed[total.confirmed$Date > '2020-03-15'], aes(x = Date)) + 
+  geom_line(aes(y = Washington), color = 'green') +
+  geom_line(aes(y = California), color = 'red' ) + 
+  geom_line(aes(y = Florida), color = 'black')
 
