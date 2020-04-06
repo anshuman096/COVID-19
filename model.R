@@ -20,5 +20,7 @@ ggplot(total.confirmed, aes(x = Date, y = `New York`)) +
 ggplot(total.confirmed[total.confirmed$Date > '2020-03-15'], aes(x = Date)) + 
   geom_line(aes(y = Washington), color = 'green') +
   geom_line(aes(y = California), color = 'red' ) + 
-  geom_line(aes(y = Florida), color = 'black')
+  geom_line(aes(y = Florida), color = 'black') + 
+  
+
 
