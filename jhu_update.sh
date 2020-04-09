@@ -5,4 +5,4 @@ function update-data {
 }
 
 update-data
-python restructure.py
+python generate_country_reports.py
