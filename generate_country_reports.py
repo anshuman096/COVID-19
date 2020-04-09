@@ -4,31 +4,24 @@ import ast
 import datetime
 import pandas as pd
 
-
-def format_row(row, header):
+def generate_observation(row, date_time):
     """
-    Some countries do not have any observations for latitude and longitude.
-    We are adding two empty spaces to those observation rows to maintain
-    uniformity of data
+    Helper function that creates formatted row from user inputted
+    row and user generated date time string.
+
+    Parameters
+    ----------
+    row : list
+        the JHU csv row that will be transformed
+    date_time : datetime object
+        date time object showing last update
+
+    Returns
+    -------
+    list
+        formatted csv row
+
     """
-    if len(header) == 6 or len(header) == 8:
-        date_time = row[2]
-    else:
-        date_time = row[4]
-
-
-    try:
-        date_time = datetime.datetime.strptime(date_time, "%Y-%m-%dT%H:%M:%S").date()
-    except:
-        try:
-            date_time = datetime.datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S").date()
-        except:
-            try:
-                date_time = datetime.datetime.strptime(date_time, "%m/%d/%Y %H:%M").date()
-            except:
-                date_time = datetime.datetime.strptime(date_time, "%m/%d/%y %H:%M").date()
-
-
     if len(row) == 6:
         observation = row[:2] + [str(date_time)] + row[3:]
         observation += ['', '']
@@ -42,6 +35,39 @@ def format_row(row, header):
             coordinates = row[5:7]
         observation = row[2:4] + [str(date_time)] + row[7:10] + coordinates
     return observation
+
+
+def format_row(row, header):
+    """
+    Function to format data table rows and provide uniformity across all recorded
+    rows of data tables. JHU datasets record their data in 3 different ways. This
+    function takes as input a row from any of the JHU csvs and outputs a row of a
+    uniform format.
+    Parameters
+    ----------
+    row : list
+        list of data from JHU csv
+    header : list
+        header of corresponding row
+
+    Returns
+    -------
+    list
+        Formatted list
+
+    """
+    date_time = row[2] if len(header) == 6 or len(header) == 8 else row[4]
+    try:
+        date_time = datetime.datetime.strptime(date_time, "%Y-%m-%dT%H:%M:%S").date()
+    except:
+        try:
+            date_time = datetime.datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S").date()
+        except:
+            try:
+                date_time = datetime.datetime.strptime(date_time, "%m/%d/%Y %H:%M").date()
+            except:
+                date_time = datetime.datetime.strptime(date_time, "%m/%d/%y %H:%M").date()
+    return generate_observation(row, date_time)
 
 
 
