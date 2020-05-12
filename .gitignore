@@ -2,3 +2,7 @@
 .Rhistory
 *.Rproj*
 csse_covid_19_country_reports
+.Rproj.user
+model.py
+jax_model.py
+model.R

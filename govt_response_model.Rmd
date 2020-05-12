@@ -1,0 +1,223 @@
+---
+title: "model"
+author: "Anshuman Dikhit & Precila Dessai"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Import libraries
+```{r}
+library(moments)
+library(MASS)
+library(car)
+library(ggplot2)
+```
+
+## Convert cumulative counts to new counts
+
+The data in our current datasets currently displays a cumulative count of confirmed cases for each progressive day. This is not what we want. We need the number of NEW Cases in a single day
+
+```{r}
+# create a list of data frames
+file_names = list.files(path = './JHU-COVID-19/csse_covid_19_data/csse_covid_19_daily_reports_us/', pattern = '*.csv')
+file_paths = file.path('./csse_covid_19_daily_reports_us', file_names)
+df_list = lapply(file_paths, read.csv)
+# filter out US territories
+df_list = lapply(df_list, FUN = function(df) { df[(df$Province_State %in% state.name), ]})
+
+# calculate new cases
+num_files = length(df_list)
+for(i in 2:num_files) {
+  df_list[[i]]$New_Cases = df_list[[i]]$Confirmed - df_list[[i - 1]]$Confirmed
+  if(i == 2)
+    df_list[[i]]$Yesterdays_Cases = 0
+  else
+    df_list[[i]]$Yesterdays_Cases = df_list[[i - 1]]$New_Cases
+}
+# in order to keep all of our data consistent, we must drop the first day's data - it is the only one with an aggregate count
+df_list = df_list[2:length(df_list)]
+```
+
+
+
+
+## Merge Data
+
+We will be merging data from all days into one dataset. Afterwards, we will rearrange the the data so that all state observations are placed together
+```{r}
+us_data = do.call(rbind, df_list)
+drops = c('Last_Update','Lat', 'Long_', 'Confirmed', 'Deaths', 'Recovered', 'Active', 'FIPS', 'Incident_Rate', 'People_Tested', 'People_Hospitalized', 'Mortality_Rate', 'UID', 'ISO3')
+us_data = us_data[, !(names(us_data) %in% drops)]
+us_data = us_data[complete.cases(us_data), ]
+
+state_df_list = list()
+for(i in 1:50) {
+  state_df = us_data[us_data$Province_State == state.name[i], ]
+  if(nrow(state_df) == 0)
+    next
+  state_df = state_df[, !(names(state_df) %in% drops)]
+  state_df$Country_Region = state.region[match(state_df$Province_State, state.name)]
+  num_splits = ceiling(nrow(state_df)/7)
+  splits_list = list()
+  for(j in 1:num_splits) {
+    start_idx = 7 * (j - 1) + 1
+    end_idx = 7 * j
+    split_df = state_df[start_idx:min(end_idx, nrow(state_df)), ]
+    split_df = aggregate(split_df[,3:ncol(split_df)], split_df[,1:2], FUN = mean)
+    splits_list[[j]] = split_df
+  }
+  state_df =  do.call(rbind, splits_list)
+  state_df_list[[i]] = state_df
+}
+us_data = do.call(rbind, state_df_list)
+col_names = c("State", "Region", "Avg_Tst_Rate", "Avg_Hsp_Rate", "Avg_Wkly_NC", "Avg_Cases_LW")
+colnames(us_data) = col_names
+head(us_data)
+```
+
+## Perform necessary transformations
+
+Next step is to ensure we uphold the assumption of normality across our continuous explanatory variables. This includes testing and transforming any variables necessary.
+
+Testing of our continuous explanatory variables will be done by performing 3 tests:
+
+1. Visual analysis of a histogram of our explanatory variable
+2. Visual analysis of a Normal QQ-plot of our explanatory variable
+3. Calculation of skewness and kurtosis of our explanatory variable
+
+### Test normality of Testing Rate
+
+```{r}
+# normality of testing rate
+ggplot(us_data, aes(x = Avg_Tst_Rate)) + geom_histogram(color = "black", fill = "red")
+ggplot(us_data, aes(sample = Avg_Tst_Rate)) + stat_qq() + stat_qq_line()
+skewness(us_data$Avg_Tst_Rate)
+kurtosis(us_data$Avg_Tst_Rate)
+```
+
+
+Our histogram shows a strong right skew, our qq plot is not at all linear and our skewness and kurtosis values are far greater than 0 and 3. We will try to normalize it via a log transformation.
+
+```{r}
+# normality test for log transformed Testing Rate
+ggplot(us_data, aes(x = log(Avg_Tst_Rate))) + geom_histogram(color = "black", fill = "red")
+ggplot(us_data, aes(sample = log(Avg_Tst_Rate))) + stat_qq() + stat_qq_line()
+skewness(log(us_data$Avg_Tst_Rate))
+kurtosis(log(us_data$Avg_Tst_Rate))
+```
+
+Visually, our histogram seems much more normal, our QQ-plot is linear, and our corresponding skewness and kurtosis values are 0.5 and 3.05, much closer to the expected values of 0 and 3. This log transformation makes our explanatory variable of `Avg_Tst_Rate` normal enough to uphold our assumption of normality.
+
+```{r}
+us_data$log_Test_Rate = log(us_data$Avg_Tst_Rate)
+```
+
+### Test normality of Hospitalization Rate
+
+```{r}
+ggplot(us_data, aes(x = Avg_Hsp_Rate)) + geom_histogram(color = "black", fill = "blue")
+ggplot(us_data, aes(sample = Avg_Hsp_Rate)) + stat_qq() + stat_qq_line()
+skewness(us_data$Avg_Hsp_Rate)
+kurtosis(us_data$Avg_Hsp_Rate)
+```
+
+Visually, our histogram seems pretty normal, our QQ-plot is linear, and our corresponding skewness and kurtosis values are 0.66 and 3.05, much closer to the expected values of 0 and 3. Our explanatory variable of `Avg_Hsp_Rate` seems normal enough to uphold our assumption of normality.
+
+## Standardization
+
+Due to the log transformation of one of our explanatory variables, the ranges of our explanatory variables has been completely modified. We will standardize our explanatory variables to combat this.
+```{r}
+mean_hsp_rate = mean(us_data$Avg_Hsp_Rate)
+sd_hsp_rate = sd(us_data$Avg_Hsp_Rate)
+
+mean_log_Test_Rate = mean(us_data$log_Test_Rate)
+sd_log_Test_Rate = sd(us_data$log_Test_Rate)
+
+us_data$std_hsp_rate = (us_data$Avg_Hsp_Rate - mean_hsp_rate)/sd_hsp_rate
+us_data$std_log_Test_Rate = (us_data$log_Test_Rate - mean_log_Test_Rate)/sd_log_Test_Rate
+head(us_data)
+```
+
+## Check for Multicollinnearity
+
+Before we perform any transformations or build any models, we will test our continuous explanatory variables for multicollinearity
+
+```{r}
+vif(lm(Avg_Wkly_NC ~ Region + Avg_Tst_Rate + Avg_Hsp_Rate + Avg_Cases_LW, data = us_data))
+```
+
+All of our explanatory variables have Variance Inflation Factors with values less than 10 - there is no multicollinearity within our model.
+
+
+
+## Cross Validation
+
+Since our question is not one of prediction, but of inference, we do not need to test the accuracy of our model against future data. Rather we should be testing its accuracy against our current observed values (this can be done by calculating the RMSE).
+
+## Train our model
+
+### Create our Baseline model
+
+Our first model will simply regress our Y variable (`Avg_Wkly_NC`) against our pre-determined explanatory variables (`Region`, `log_Test_Rate`, `Avg_Hsp_Rate`, and `Avg_Cases_LW`)
+```{r}
+first_model = lm(Avg_Wkly_NC ~ Region + std_log_Test_Rate + std_hsp_rate + Avg_Cases_LW, data = us_data)
+summary(first_model)
+plot(first_model, which = c(1))
+```
+
+All of our categorical variables have p values greater than 0.05 - meaning that the region of the United States adds nothing of significance to the calculation of this week's average number of new cases. Since all of our categorical dummies are insignificant, we can remove the entire variable from our model.
+
+```{r}
+step_model = lm(Avg_Wkly_NC ~ std_log_Test_Rate + std_hsp_rate + Avg_Cases_LW, data = us_data)
+summary(step_model)
+plot(step_model, which = c(1))
+```
+
+The log(Test Rate) predictor has our highest p-value with 0.17, meaning that the log of the Testing Rate adds nothing of significance to the calculation of this week's average number of new cases. We should remove it.
+
+```{r}
+step_model = lm(Avg_Wkly_NC ~ std_hsp_rate + Avg_Cases_LW, data = us_data)
+summary(step_model)
+plot(step_model, which = c(1))
+```
+
+
+This model seems to have all significant predictors. It seems that the only two significant predictors in the calculation of the average number of test cases for the current week are `Avg_Cases_LW` and `std_hsp_rate`.
+
+
+## Testing Final Model
+
+Now that we have our final model, we will test its accuracy by calculating out the RMSE of our model.
+
+```{r}
+y_hat = predict(step_model, newdata = us_data)
+rmse = sqrt(mean((y_hat - us_data$Avg_Wkly_NC)^2))
+mean(us_data$Avg_Wkly_NC)
+rmse
+```
+
+With an R-squared value of 0.974 and a RMSE value of 154.8, I would say that the accuracy of our model is fairly strong. The effect of the explanatory variables of `Avg_Cases_LW` and `std_hsp_rate` is fairly significant - and that this model can be used with confidence to calculate the average number of weekly cases.
+
+This additional scatterplot shows the fit of our predicted values against the observed values.
+```{r}
+accuracy_df = data.frame(cbind(y_hat, us_data$Avg_Wkly_NC))
+ggplot(accuracy_df) +
+  geom_point(aes(as.numeric(rownames(accuracy_df)), V2), color = 'blue') +
+  geom_point(aes(as.numeric(rownames(accuracy_df)), y_hat), color = "red") +
+  ggtitle('Predictions vs Observed values') + xlab('Observation Index') + ylab('Weekly Average of New Cases')
+```
+
+
+##  Final Model
+
+Based off of our analysis - our final model equation is:
+
+$$
+\begin{aligned}
+Avg\_New\_Cases&=-50.0653+3.8044\cdot standardized(Avg\_Hosp\_Rate)+1.0044\cdot Avg\_New\_Cases\_LastWeek \\
+standardized(Avg\_Hosp\_Rate)&=\left(\frac{Avg\_Hosp\_Rate-\mu_{Avg\_Hosp\_Rate}}{\sigma_{Avg\_Hosp\_Rate}}\right)
+\end{aligned}
+$$

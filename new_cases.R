@@ -1,4 +1,5 @@
 library(ggplot2)
+library(plotly)
 source('utils/utils.R')
 
 total.confirmed = get.US.total.confirmed()
