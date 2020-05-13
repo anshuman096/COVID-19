@@ -5,4 +5,4 @@ function update-data {
 }
 
 update-data
-python generate_country_reports.py
+python utils/generate_country_reports.py
