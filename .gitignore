@@ -6,3 +6,6 @@ csse_covid_19_country_reports
 model.py
 jax_model.py
 model.R
+new_cases.R
+us_deaths.R
+confirmed_cases.R
