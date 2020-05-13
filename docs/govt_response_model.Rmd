@@ -22,8 +22,8 @@ The data in our current datasets currently displays a cumulative count of confir
 
 ```{r}
 # create a list of data frames
-file_names = list.files(path = './JHU-COVID-19/csse_covid_19_data/csse_covid_19_daily_reports_us/', pattern = '*.csv')
-file_paths = file.path('./csse_covid_19_daily_reports_us', file_names)
+file_names = list.files(path = '../JHU-COVID-19/csse_covid_19_data/csse_covid_19_daily_reports_us/', pattern = '*.csv')
+file_paths = file.path('../JHU-COVID-19/csse_covid_19_data/csse_covid_19_daily_reports_us', file_names)
 df_list = lapply(file_paths, read.csv)
 # filter out US territories
 df_list = lapply(df_list, FUN = function(df) { df[(df$Province_State %in% state.name), ]})
