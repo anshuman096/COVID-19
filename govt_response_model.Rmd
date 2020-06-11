@@ -1,12 +1,6 @@
 ---
-title: "model"
+title: "Government Response to CoVID-19"
 author: "Anshuman Dikhit & Precila Dessai"
-output: html_document
-knit: (function(input_file, encoding) {
-  out_dir <- 'docs';
-  rmarkdown::render(input_file,
- encoding=encoding,
- output_file=file.path(dirname(input_file), out_dir, 'govt_response_model.html'))})
 ---
 
 ```{r setup, include=FALSE}
@@ -42,7 +36,7 @@ for(i in 2:num_files) {
   else
     df_list[[i]]$Yesterdays_Cases = df_list[[i - 1]]$New_Cases
 }
-# in order to keep all of our data consistent, we must drop the first day's data - it is the only one with an aggregate count
+# in order to keep all of our data consistent, we must drop the first day's data - it is the only one without a new case count
 df_list = df_list[2:length(df_list)]
 ```
 

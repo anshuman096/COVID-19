@@ -1,0 +1,10 @@
+name: "Covid 19 Analysis"
+output_dir: "docs"
+navbar:
+    title: "Analyses Models"
+    left:
+        - text: "Government Response Analysis"
+        - href: govt_response_model.html
+output:
+  html_document:
+ theme: jekyll-theme-cayman
