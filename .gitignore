@@ -9,5 +9,3 @@ model.R
 new_cases.R
 us_deaths.R
 confirmed_cases.R
-*.html
-*.yml
